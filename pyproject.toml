@@ -1,0 +1,9 @@
+[project]
+name = "timesheetautomation"
+version = "0.1.0"
+description = "Automated timesheet filling for PeopleHub using Playwright"
+requires-python = ">=3.11"
+dependencies = [
+    "playwright>=1.56.0",
+    "python-dotenv>=1.2.1",
+]

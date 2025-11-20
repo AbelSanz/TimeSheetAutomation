@@ -1,0 +1,65 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Timesheet Automation",
+            "type": "shell",
+            "command": "uv",
+            "args": ["run", "python", "main.py"],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Clear Saved Session",
+            "type": "shell",
+            "command": "Remove-Item",
+            "args": ["-Path", "playwright\\.auth\\state.json", "-ErrorAction", "SilentlyContinue"],
+            "windows": {
+                "command": "Remove-Item",
+                "args": ["-Path", "playwright\\.auth\\state.json", "-ErrorAction", "SilentlyContinue"]
+            },
+            "linux": {
+                "command": "rm",
+                "args": ["-f", "playwright/.auth/state.json"]
+            },
+            "osx": {
+                "command": "rm",
+                "args": ["-f", "playwright/.auth/state.json"]
+            },
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Install Dependencies",
+            "type": "shell",
+            "command": "uv",
+            "args": ["sync"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Install Playwright Browsers",
+            "type": "shell",
+            "command": "uv",
+            "args": ["run", "playwright", "install", "chromium"],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        }
+    ]
+}
