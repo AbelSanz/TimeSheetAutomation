@@ -30,26 +30,27 @@ class Config:
     TIMESHEET_URL = os.getenv("TIMESHEET_URL", "https://peoplehub.languagewire.com")
     
     # Time entries configuration
+    # Each day can have different time entries configured via environment variables
     TIME_ENTRIES = {
         "monday": [
-            {"start": os.getenv("START_TIME_1", "08:30"), "end": os.getenv("END_TIME_1", "14:00")},
-            {"start": os.getenv("START_TIME_2", "14:45"), "end": os.getenv("END_TIME_2", "17:00")},
+            {"start": os.getenv("MONDAY_START_TIME_1", "08:30"), "end": os.getenv("MONDAY_END_TIME_1", "14:00")},
+            {"start": os.getenv("MONDAY_START_TIME_2", "14:45"), "end": os.getenv("MONDAY_END_TIME_2", "17:00")},
         ],
         "tuesday": [
-            {"start": os.getenv("START_TIME_1", "08:30"), "end": os.getenv("END_TIME_1", "14:00")},
-            {"start": os.getenv("START_TIME_2", "14:45"), "end": os.getenv("END_TIME_2", "17:00")},
+            {"start": os.getenv("TUESDAY_START_TIME_1", "08:30"), "end": os.getenv("TUESDAY_END_TIME_1", "14:00")},
+            {"start": os.getenv("TUESDAY_START_TIME_2", "14:45"), "end": os.getenv("TUESDAY_END_TIME_2", "17:00")},
         ],
         "wednesday": [
-            {"start": os.getenv("START_TIME_1", "08:30"), "end": os.getenv("END_TIME_1", "14:00")},
-            {"start": os.getenv("START_TIME_2", "14:45"), "end": os.getenv("END_TIME_2", "17:00")},
+            {"start": os.getenv("WEDNESDAY_START_TIME_1", "08:30"), "end": os.getenv("WEDNESDAY_END_TIME_1", "14:00")},
+            {"start": os.getenv("WEDNESDAY_START_TIME_2", "14:45"), "end": os.getenv("WEDNESDAY_END_TIME_2", "17:00")},
         ],
         "thursday": [
-            {"start": os.getenv("START_TIME_1", "08:30"), "end": os.getenv("END_TIME_1", "14:00")},
-            {"start": os.getenv("START_TIME_2", "14:45"), "end": os.getenv("END_TIME_2", "17:00")},
+            {"start": os.getenv("THURSDAY_START_TIME_1", "08:30"), "end": os.getenv("THURSDAY_END_TIME_1", "14:00")},
+            {"start": os.getenv("THURSDAY_START_TIME_2", "14:45"), "end": os.getenv("THURSDAY_END_TIME_2", "17:00")},
         ],
         "friday": [
-            {"start": os.getenv("START_TIME_1", "08:30"), "end": os.getenv("END_TIME_1", "14:00")},
-            {"start": os.getenv("START_TIME_2", "14:45"), "end": os.getenv("END_TIME_2", "17:00")},
+            {"start": os.getenv("FRIDAY_START_TIME_1", "08:30"), "end": os.getenv("FRIDAY_END_TIME_1", "14:00")},
+            {"start": os.getenv("FRIDAY_START_TIME_2", "14:45"), "end": os.getenv("FRIDAY_END_TIME_2", "17:00")},
         ],
     }
     

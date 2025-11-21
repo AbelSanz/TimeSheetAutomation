@@ -43,18 +43,31 @@ This Python application automates the process of filling timesheets on peoplehub
 
 ## Configuration
 
-Edit `.env` to configure the application:
+Edit `.env` to configure the application. You can set different times for each day:
 
 ```env
 # Base URL for the timesheet application
-TIMESHEET_URL=https://plehub.languagewire.com
+TIMESHEET_URL=https://peoplehub.languagewire.com
 
-# Time entries (HH:MM format)
-START_TIME_1=08:30
-END_TIME_1=14:00
-START_TIME_2=14:45
-END_TIME_2=17:00
+# Time entries per day (HH:MM format)
+# Customize times for each day individually
+
+# Monday
+MONDAY_START_TIME_1=08:30
+MONDAY_END_TIME_1=14:00
+MONDAY_START_TIME_2=14:45
+MONDAY_END_TIME_2=17:00
+
+# Tuesday
+TUESDAY_START_TIME_1=08:30
+TUESDAY_END_TIME_1=14:00
+TUESDAY_START_TIME_2=14:45
+TUESDAY_END_TIME_2=17:00
+
+# ... and so on for Wednesday, Thursday, Friday
 ```
+
+**Note**: All days use the same default times (08:30-14:00, 14:45-17:00), but you can customize individual days as needed.
 
 ## Usage
 
@@ -97,11 +110,12 @@ TimeSheetAutomation/
 3. **Automation**: 
    - Clicks the "Current" button to access current week's timesheet
    - For each weekday (Monday-Friday):
-     - Fills first time block (default: 8:30-14:00)
+     - Fills first time block with configured times for that day
      - Adds second time block using the "+" button
-     - Fills second time block (default: 14:45-17:00)
+     - Fills second time block with configured times for that day
      - Collapses the dropdown
-4. **Session Saving**: Saves authentication state for future runs.
+4. **Auto-Save**: Waits for the timesheet to auto-save after all days are collapsed
+5. **Session Saving**: Saves authentication state for future runs.
 
 ## Troubleshooting
 
