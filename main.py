@@ -15,9 +15,58 @@ from config import Config, logger
 class TimesheetAutomation:
     """Main automation class for timesheet filling."""
     
+    # CSS classes that indicate special days that should not be filled
+    SPECIAL_DAY_INDICATORS = [
+        "wx-timesheet-day__indicator-holiday",           # Public holidays
+        "wx-timesheet-day__indicator-vacation-approved", # Approved vacations
+        "wx-timesheet-day__indicator-absence-approved",  # Approved absences
+    ]
+    
     def __init__(self):
         """Initialize the automation."""
         self.config = Config
+    
+    def is_special_day(self, page: Page, day_name: str) -> tuple[bool, str]:
+        """
+        Check if a day is a special day (holiday, vacation, or absence).
+        
+        Special days have indicator spans with specific CSS classes that indicate
+        the day should not have time entries filled.
+        
+        Args:
+            page: Playwright page instance
+            day_name: Name of the day (e.g., "Monday")
+            
+        Returns:
+            tuple[bool, str]: (is_special, reason) - True if day is special, with reason
+        """
+        try:
+            # Find the day header
+            day_header = page.locator(
+                f"div.wx-timesheet-day__header-weekday:has-text('{day_name}')"
+            ).first
+            
+            # Check for each special indicator class
+            for indicator_class in self.SPECIAL_DAY_INDICATORS:
+                indicator = day_header.locator(f"span.{indicator_class}")
+                if indicator.count() > 0:
+                    # Determine the reason based on the class
+                    if "holiday" in indicator_class:
+                        reason = "Public Holiday"
+                    elif "vacation" in indicator_class:
+                        reason = "Approved Vacation"
+                    elif "absence" in indicator_class:
+                        reason = "Approved Absence"
+                    else:
+                        reason = "Special Day"
+                    
+                    return True, reason
+            
+            return False, ""
+            
+        except Exception as e:
+            logger.warning(f"Could not check special day status for {day_name}: {e}")
+            return False, ""
         
     def fill_time_entry(self, page: Page, day_name: str, entry_index: int, 
                        start_time: str, end_time: str) -> None:
@@ -109,12 +158,20 @@ class TimesheetAutomation:
         """
         Process all time entries for a single day.
         
+        Skips processing for special days (holidays, approved vacations, approved absences).
+        
         Args:
             page: Playwright page instance
             day_name: Name of the day to process
         """
         try:
             logger.info(f"Processing {day_name}")
+            
+            # Check if this is a special day that should be skipped
+            is_special, reason = self.is_special_day(page, day_name)
+            if is_special:
+                logger.info(f"⏭️  Skipping {day_name}: {reason}")
+                return
             
             # Get time entries for this day
             entries = self.config.TIME_ENTRIES.get(day_name.lower(), [])
