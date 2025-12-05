@@ -6,7 +6,7 @@ Create a Python application that uses uv for package management and Playwright f
 
 1. **Initialize project structure**: Create `pyproject.toml` with uv, add Playwright and python-dotenv dependencies, and set up `.env` for credentials and `.gitignore` for security.
 
-2. **Create main automation script**: Implement Python module that launches Playwright browser, navigates to plehub.languagewire.com, handles authentication, and navigates to the timesheet page.
+2. **Create main automation script**: Implement Python module that launches Playwright browser, navigates to peoplehub.languagewire.com, handles authentication, and navigates to the timesheet page.
 
 3. **Implement timesheet interaction logic**: Locate and click the "Current" button, then iterate through weekday dropdowns (Monday-Friday) to fill start/end time pairs (8:30-14:00, 14:45-17:00) using the "+" button to add the second time block.
 
