@@ -22,23 +22,69 @@ class TimesheetAutomation:
         "wx-timesheet-day__indicator-absence-approved",  # Approved absences
     ]
     
+    # Time entries for half-day holidays
+    MORNING_ONLY_ENTRIES = [
+        {"start": "08:30", "end": "12:30"}  # When afternoon is off
+    ]
+    AFTERNOON_ONLY_ENTRIES = [
+        {"start": "13:00", "end": "17:00"}  # When morning is off
+    ]
+    
     def __init__(self):
         """Initialize the automation."""
         self.config = Config
     
-    def is_special_day(self, page: Page, day_name: str) -> tuple[bool, str]:
+    def get_tooltip_text(self, page: Page, element) -> str:
+        """
+        Get the tooltip text for an element by reading the aria-describedby reference.
+        
+        The tooltip text is stored in a hidden div container at the bottom of the body.
+        The element has an aria-describedby attribute pointing to the tooltip's ID.
+        
+        Args:
+            page: Playwright page instance
+            element: The element with the aria-describedby attribute
+            
+        Returns:
+            str: The tooltip text, or empty string if not found
+        """
+        try:
+            describedby_id = element.get_attribute("aria-describedby")
+            logger.debug(f"aria-describedby attribute: {describedby_id}")
+            
+            if describedby_id:
+                # The tooltip text is in a div with the referenced ID
+                # Use text_content() instead of inner_text() because the tooltip
+                # container is hidden with visibility: hidden
+                tooltip_element = page.locator(f"#{describedby_id}")
+                if tooltip_element.count() > 0:
+                    text = tooltip_element.text_content()
+                    logger.debug(f"Found tooltip text: {text}")
+                    return text or ""
+                else:
+                    logger.debug(f"No element found with ID: {describedby_id}")
+            else:
+                logger.debug("No aria-describedby attribute found on element")
+            return ""
+        except Exception as e:
+            logger.debug(f"Could not get tooltip text: {e}")
+            return ""
+    
+    def is_special_day(self, page: Page, day_name: str) -> tuple[bool, str, str]:
         """
         Check if a day is a special day (holiday, vacation, or absence).
         
         Special days have indicator spans with specific CSS classes that indicate
-        the day should not have time entries filled.
+        the day should not have time entries filled. Also detects half-day holidays
+        by checking the tooltip text.
         
         Args:
             page: Playwright page instance
             day_name: Name of the day (e.g., "Monday")
             
         Returns:
-            tuple[bool, str]: (is_special, reason) - True if day is special, with reason
+            tuple[bool, str, str]: (is_special, reason, tooltip_text) - True if day is special, 
+                                   with reason and tooltip text for half-day detection
         """
         try:
             # Find the day header
@@ -49,7 +95,14 @@ class TimesheetAutomation:
             # Check for each special indicator class
             for indicator_class in self.SPECIAL_DAY_INDICATORS:
                 indicator = day_header.locator(f"span.{indicator_class}")
-                if indicator.count() > 0:
+                indicator_count = indicator.count()
+                logger.debug(f"{day_name}: Checking for {indicator_class}, found {indicator_count}")
+                
+                if indicator_count > 0:
+                    # Get the tooltip text for this indicator
+                    tooltip_text = self.get_tooltip_text(page, indicator.first)
+                    logger.info(f"{day_name}: Found indicator '{indicator_class}', tooltip: '{tooltip_text}'")
+                    
                     # Determine the reason based on the class
                     if "holiday" in indicator_class:
                         reason = "Public Holiday"
@@ -60,13 +113,13 @@ class TimesheetAutomation:
                     else:
                         reason = "Special Day"
                     
-                    return True, reason
+                    return True, reason, tooltip_text
             
-            return False, ""
+            return False, "", ""
             
         except Exception as e:
             logger.warning(f"Could not check special day status for {day_name}: {e}")
-            return False, ""
+            return False, "", ""
         
     def fill_time_entry(self, page: Page, day_name: str, entry_index: int, 
                        start_time: str, end_time: str) -> None:
@@ -158,7 +211,8 @@ class TimesheetAutomation:
         """
         Process all time entries for a single day.
         
-        Skips processing for special days (holidays, approved vacations, approved absences).
+        Skips processing for special days (holidays, approved vacations, approved absences),
+        but handles half-day holidays by filling only morning or afternoon entries.
         
         Args:
             page: Playwright page instance
@@ -168,13 +222,29 @@ class TimesheetAutomation:
             logger.info(f"Processing {day_name}")
             
             # Check if this is a special day that should be skipped
-            is_special, reason = self.is_special_day(page, day_name)
-            if is_special:
-                logger.info(f"⏭️  Skipping {day_name}: {reason}")
-                return
+            is_special, reason, tooltip_text = self.is_special_day(page, day_name)
             
-            # Get time entries for this day
-            entries = self.config.TIME_ENTRIES.get(day_name.lower(), [])
+            if is_special:
+                tooltip_lower = tooltip_text.lower()
+                
+                # Check for half-day holidays
+                if "afternoon off" in tooltip_lower:
+                    logger.info(f"🌅 {day_name}: {reason} - Afternoon off ('{tooltip_text}')")
+                    logger.info("   → Filling morning hours only (8:30-12:30)")
+                    entries = self.MORNING_ONLY_ENTRIES
+                elif "morning off" in tooltip_lower:
+                    logger.info(f"🌆 {day_name}: {reason} - Morning off ('{tooltip_text}')")
+                    logger.info("   → Filling afternoon hours only (13:00-17:00)")
+                    entries = self.AFTERNOON_ONLY_ENTRIES
+                else:
+                    # Full day off - skip entirely
+                    logger.info(f"⏭️  Skipping {day_name}: {reason}")
+                    if tooltip_text:
+                        logger.info(f"   Tooltip: {tooltip_text}")
+                    return
+            else:
+                # Regular day - get normal time entries
+                entries = self.config.TIME_ENTRIES.get(day_name.lower(), [])
             
             if not entries:
                 logger.warning(f"No time entries configured for {day_name}")
