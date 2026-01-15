@@ -72,6 +72,25 @@ LOG_LEVEL=DEBUG
 
 **Default**: All weekdays use 08:30-14:00 and 14:45-17:00 unless customized.
 
+### Special Days & Half-Days
+
+Configure CSS indicators and half-day blocks via `.env` if your tenant uses different classes or times:
+
+```env
+# Special day indicators (CSS classes)
+SPECIAL_DAY_INDICATOR_HOLIDAY=wx-timesheet-day__indicator-holiday
+SPECIAL_DAY_INDICATOR_VACATION_APPROVED=wx-timesheet-day__indicator-vacation-approved
+SPECIAL_DAY_INDICATOR_ABSENCE_APPROVED=wx-timesheet-day__indicator-absence-approved
+
+# Half-day defaults
+MORNING_ONLY_START_TIME_1=08:30
+MORNING_ONLY_END_TIME_1=12:30
+AFTERNOON_ONLY_START_TIME_1=13:00
+AFTERNOON_ONLY_END_TIME_1=17:00
+```
+
+If unset, the defaults shown above are used (defined in `config.py`).
+
 ## How It Works
 
 ### Automation Flow

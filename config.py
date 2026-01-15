@@ -55,17 +55,23 @@ class Config:
 
     # CSS classes indicating days that should be skipped
     SPECIAL_DAY_INDICATORS = [
-        "wx-timesheet-day__indicator-holiday",            # Public holidays
-        "wx-timesheet-day__indicator-vacation-approved",  # Approved vacations
-        "wx-timesheet-day__indicator-absence-approved",   # Approved absences
+        os.getenv("SPECIAL_DAY_INDICATOR_HOLIDAY", "wx-timesheet-day__indicator-holiday"),
+        os.getenv("SPECIAL_DAY_INDICATOR_VACATION_APPROVED", "wx-timesheet-day__indicator-vacation-approved"),
+        os.getenv("SPECIAL_DAY_INDICATOR_ABSENCE_APPROVED", "wx-timesheet-day__indicator-absence-approved"),
     ]
 
     # Time entries used for half-day holidays
     MORNING_ONLY_ENTRIES = [
-        {"start": "08:30", "end": "12:30"},  # When afternoon is off
+        {
+            "start": os.getenv("MORNING_ONLY_START_TIME_1", "08:30"),
+            "end": os.getenv("MORNING_ONLY_END_TIME_1", "12:30"),
+        },
     ]
     AFTERNOON_ONLY_ENTRIES = [
-        {"start": "13:00", "end": "17:00"},  # When morning is off
+        {
+            "start": os.getenv("AFTERNOON_ONLY_START_TIME_1", "13:00"),
+            "end": os.getenv("AFTERNOON_ONLY_END_TIME_1", "17:00"),
+        },
     ]
     
     # Logging configuration
