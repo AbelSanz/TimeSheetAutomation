@@ -8,7 +8,6 @@ for the timesheet automation application.
 import logging
 import os
 from pathlib import Path
-from typing import Dict
 
 from dotenv import load_dotenv
 
@@ -53,6 +52,21 @@ class Config:
             {"start": os.getenv("FRIDAY_START_TIME_2", "14:45"), "end": os.getenv("FRIDAY_END_TIME_2", "17:00")},
         ],
     }
+
+    # CSS classes indicating days that should be skipped
+    SPECIAL_DAY_INDICATORS = [
+        "wx-timesheet-day__indicator-holiday",            # Public holidays
+        "wx-timesheet-day__indicator-vacation-approved",  # Approved vacations
+        "wx-timesheet-day__indicator-absence-approved",   # Approved absences
+    ]
+
+    # Time entries used for half-day holidays
+    MORNING_ONLY_ENTRIES = [
+        {"start": "08:30", "end": "12:30"},  # When afternoon is off
+    ]
+    AFTERNOON_ONLY_ENTRIES = [
+        {"start": "13:00", "end": "17:00"},  # When morning is off
+    ]
     
     # Logging configuration
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")

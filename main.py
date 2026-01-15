@@ -15,21 +15,6 @@ from config import Config, logger
 class TimesheetAutomation:
     """Main automation class for timesheet filling."""
     
-    # CSS classes that indicate special days that should not be filled
-    SPECIAL_DAY_INDICATORS = [
-        "wx-timesheet-day__indicator-holiday",           # Public holidays
-        "wx-timesheet-day__indicator-vacation-approved", # Approved vacations
-        "wx-timesheet-day__indicator-absence-approved",  # Approved absences
-    ]
-    
-    # Time entries for half-day holidays
-    MORNING_ONLY_ENTRIES = [
-        {"start": "08:30", "end": "12:30"}  # When afternoon is off
-    ]
-    AFTERNOON_ONLY_ENTRIES = [
-        {"start": "13:00", "end": "17:00"}  # When morning is off
-    ]
-    
     def __init__(self):
         """Initialize the automation."""
         self.config = Config
@@ -93,7 +78,7 @@ class TimesheetAutomation:
             ).first
             
             # Check for each special indicator class
-            for indicator_class in self.SPECIAL_DAY_INDICATORS:
+            for indicator_class in self.config.SPECIAL_DAY_INDICATORS:
                 indicator = day_header.locator(f"span.{indicator_class}")
                 indicator_count = indicator.count()
                 logger.debug(f"{day_name}: Checking for {indicator_class}, found {indicator_count}")
@@ -231,11 +216,11 @@ class TimesheetAutomation:
                 if "afternoon off" in tooltip_lower:
                     logger.info(f"🌅 {day_name}: {reason} - Afternoon off ('{tooltip_text}')")
                     logger.info("   → Filling morning hours only (8:30-12:30)")
-                    entries = self.MORNING_ONLY_ENTRIES
+                    entries = self.config.MORNING_ONLY_ENTRIES
                 elif "morning off" in tooltip_lower:
                     logger.info(f"🌆 {day_name}: {reason} - Morning off ('{tooltip_text}')")
                     logger.info("   → Filling afternoon hours only (13:00-17:00)")
-                    entries = self.AFTERNOON_ONLY_ENTRIES
+                    entries = self.config.AFTERNOON_ONLY_ENTRIES
                 else:
                     # Full day off - skip entirely
                     logger.info(f"⏭️  Skipping {day_name}: {reason}")

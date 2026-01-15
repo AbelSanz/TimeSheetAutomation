@@ -1,143 +1,216 @@
 # TimeSheet Automation
 
-Automated timesheet filling for PeopleHub using Playwright.
-
-## Description
-
-This Python application automates the process of filling timesheets on peoplehub.languagewire.com. It navigates to the timesheet page, fills in time entries for Monday through Friday with configurable start and end times.
+Automated timesheet filling for PeopleHub using Playwright with session persistence and per-day time configuration.
 
 ## Features
 
-- **Session Persistence**: Saves browser authentication state to avoid repeated logins
-- **Configurable Time Entries**: Easily customize working hours
-- **Error Handling**: Robust error handling with detailed logging
-- **Visible Browser Mode**: Run with browser UI visible for monitoring
+- ✅ **Session Persistence**: Login once, reuse authentication across runs
+- ✅ **Per-Day Configuration**: Customize working hours for each weekday individually
+- ✅ **Smart Holiday Detection**: Automatically skips public holidays and approved absences
+- ✅ **Half-Day Support**: Handles morning-only or afternoon-only time entries
+- ✅ **Custom Angular Components**: Works with PeopleHub's custom time-input elements
+- ✅ **Auto-Save Integration**: Waits for timesheet auto-save after completion
+- ✅ **VS Code Integration**: Launch configurations and task runner support
+- ✅ **Visible Browser Mode**: Monitor the automation in real-time
 
-## Prerequisites
+## Quick Start
 
-- Python 3.11 or higher
+### Prerequisites
+
+- Python 3.11+
 - uv (Python package manager)
 
-## Installation
-
-1. Clone this repository:
-   ```bash
-   git clone <repository-url>
-   cd TimeSheetAutomation
-   ```
-
-2. Install dependencies:
-   ```bash
-   uv sync
-   ```
-
-3. Install Playwright browsers:
-   ```bash
-   uv run playwright install chromium
-   ```
-
-4. Create a `.env` file (optional):
-   ```bash
-   cp .env.example .env
-   ```
-
-## Configuration
-
-Edit `.env` to configure the application. You can set different times for each day:
-
-```env
-# Base URL for the timesheet application
-TIMESHEET_URL=https://peoplehub.languagewire.com
-
-# Time entries per day (HH:MM format)
-# Customize times for each day individually
-
-# Monday
-MONDAY_START_TIME_1=08:30
-MONDAY_END_TIME_1=14:00
-MONDAY_START_TIME_2=14:45
-MONDAY_END_TIME_2=17:00
-
-# Tuesday
-TUESDAY_START_TIME_1=08:30
-TUESDAY_END_TIME_1=14:00
-TUESDAY_START_TIME_2=14:45
-TUESDAY_END_TIME_2=17:00
-
-# ... and so on for Wednesday, Thursday, Friday
-```
-
-**Note**: All days use the same default times (08:30-14:00, 14:45-17:00), but you can customize individual days as needed.
-
-## Usage
-
-Run the automation script:
+### Setup
 
 ```bash
+# Install dependencies
+uv sync
+
+# Install Playwright browser
+uv run playwright install chromium
+
+# Run the automation
 uv run python main.py
 ```
 
 ### First Run
 
-On the first run, the browser will open and you'll need to manually:
-1. Log in to the timesheet application
-2. The script will save your session for future runs
+1. Browser opens and waits 60 seconds for manual login
+2. Log in to peoplehub.languagewire.com
+3. Session automatically saves to `playwright/.auth/state.json`
+4. Automation proceeds and fills timesheet
 
 ### Subsequent Runs
 
-The script will automatically use your saved session to fill timesheets without requiring login.
+- Fully automated using saved session
+- No manual login required
+- Browser closes automatically after completion
 
-## Project Structure
+## Configuration
 
+Edit `.env` to customize time entries per day:
+
+```env
+# Base URL
+TIMESHEET_URL=https://peoplehub.languagewire.com
+
+# Per-day time entries (HH:MM format)
+MONDAY_START_TIME_1=08:30
+MONDAY_END_TIME_1=14:00
+MONDAY_START_TIME_2=14:45
+MONDAY_END_TIME_2=17:00
+
+# Customize individual days
+FRIDAY_START_TIME_1=09:00
+FRIDAY_END_TIME_1=13:00
+FRIDAY_START_TIME_2=14:00
+FRIDAY_END_TIME_2=16:00
+
+# Debug logging (optional)
+LOG_LEVEL=DEBUG
 ```
-TimeSheetAutomation/
-├── main.py                 # Main entry point
-├── auth.py                 # Authentication and session management
-├── config.py               # Configuration and settings
-├── playwright/
-│   └── .auth/              # Stored authentication state (git-ignored)
-│       └── state.json      # Browser session state
-├── pyproject.toml          # Project dependencies
-├── .env                    # Environment variables (git-ignored)
-├── .env.example            # Environment variables template
-└── README.md               # This file
-```
+
+**Default**: All weekdays use 08:30-14:00 and 14:45-17:00 unless customized.
 
 ## How It Works
 
-1. **Authentication**: Checks for saved session state. If not found, opens browser for manual login.
-2. **Navigation**: Navigates to the timesheet page.
-3. **Automation**: 
-   - Clicks the "Current" button to access current week's timesheet
-   - For each weekday (Monday-Friday):
-     - Fills first time block with configured times for that day
-     - Adds second time block using the "+" button
-     - Fills second time block with configured times for that day
-     - Collapses the dropdown
-4. **Auto-Save**: Waits for the timesheet to auto-save after all days are collapsed
-5. **Session Saving**: Saves authentication state for future runs.
+### Automation Flow
+
+1. Loads saved browser session (or prompts for manual login)
+2. Navigates to timesheet page
+3. Clicks "Current" button
+4. For each weekday (Monday-Friday):
+   - Checks for holidays/absences (skips if detected)
+   - Expands day dropdown
+   - Fills first time block with configured times
+   - Adds second time block using '+' button
+   - Fills second time block
+   - Collapses dropdown
+5. Waits 10 seconds for auto-save
+6. Displays clickable review URL
+7. Closes browser
+
+### Technical Details
+
+**Custom Time Input Handling**: PeopleHub uses Angular `<time-input>` components. The script (see `config.py` for all time-entry defaults):
+
+- Clicks the time-input component
+- Selects hours span and types new value
+- Selects minutes span and types new value
+
+**Verified Selectors**:
+
+- Timesheet link: `a:has-text('Timesheet')`
+- Current button: `button.btn.btn-primary:has-text('Current')`
+- Day headers: `div.wx-timesheet-day__header-weekday:has-text('{day}')`
+- Add button: `button.test-add:has-text('+')`
+
+**Holiday Detection**: Automatically detects and skips (configured centrally in `config.py`):
+
+- Public holidays (`wx-timesheet-day__indicator-holiday`)
+- Approved vacations (`wx-timesheet-day__indicator-vacation-approved`)
+- Approved absences (`wx-timesheet-day__indicator-absence-approved`)
+
+## VS Code Integration
+
+### Launch Configurations (Press F5)
+
+- **Run Timesheet Automation**: Normal execution
+- **Run Timesheet Automation (Debug)**: With DEBUG logging
+
+### Tasks (Ctrl+Shift+P → Tasks: Run Task)
+
+- **Run Timesheet Automation**: Execute the script
+- **Clear Saved Session**: Delete authentication state
+- **Install Dependencies**: Run `uv sync`
+- **Install Playwright Browsers**: Install Chromium
+
+### Command Line
+
+```bash
+# Normal run
+uv run python main.py
+
+# Clear session and re-login
+rm playwright/.auth/state.json
+uv run python main.py
+
+# Debug mode
+$env:LOG_LEVEL="DEBUG"; uv run python main.py
+```
+
+## Project Structure
+
+```text
+TimeSheetAutomation/
+├── main.py                 # Main automation script
+├── auth.py                 # Session persistence
+├── config.py               # Configuration loader
+├── .env                    # User settings (git-ignored)
+├── .env.example            # Settings template
+├── .vscode/                # VS Code integration
+│   ├── launch.json         # Debug configurations
+│   ├── tasks.json          # Task definitions
+│   └── settings.json       # Python settings
+├── playwright/
+│   └── .auth/
+│       └── state.json      # Saved session (git-ignored)
+├── pyproject.toml          # Dependencies (uv)
+└── README.md               # This file
+```
 
 ## Troubleshooting
 
-### Session Expired
-
-If you get authentication errors, delete the session state:
+### Session Expired or Login Required
 
 ```bash
+# Delete saved session and re-authenticate
 rm playwright/.auth/state.json
+uv run python main.py
 ```
 
-Then run the script again to re-authenticate.
+### "Current button not found"
+
+- Ensure you're logged in successfully during first run
+- Script expects access to timesheet page
 
 ### Element Not Found Errors
 
-The website structure may have changed. Check the logs for specific element selector issues.
+- Website structure may have changed
+- Enable debug logging: `LOG_LEVEL=DEBUG` in `.env`
+- Check browser DevTools to verify element selectors
 
-## Security Notes
+### Modify Time Entries
 
-- Never commit `.env` or `playwright/.auth/` directory
-- The `.auth/` directory contains sensitive authentication cookies
-- Keep your authentication state secure
+Edit `.env` to customize times for specific days:
+
+```env
+# Make Friday shorter
+FRIDAY_START_TIME_1=09:00
+FRIDAY_END_TIME_1=13:00
+FRIDAY_START_TIME_2=13:45
+FRIDAY_END_TIME_2=16:00
+```
+
+Changes take effect on next run (no code changes needed).
+
+## Tips
+
+- ✅ Browser runs in visible mode for monitoring
+- ✅ Detailed logging to console (set `LOG_LEVEL=DEBUG` for verbose output)
+- ✅ Session state automatically updated after each run
+- ✅ Terminal URLs are clickable (Ctrl+Click) for review
+- ✅ All days default to same times but individually customizable
+- ✅ All special-day selectors and half-day defaults are centralized in `config.py`
+- ✅ Script handles PeopleHub's auto-save mechanism
+- ✅ Skips holidays and approved absences automatically
+
+## Security
+
+- 🔒 Never commit `.env` or `playwright/.auth/` directory
+- 🔒 Authentication cookies stored locally in `state.json`
+- 🔒 Keep session state secure and private
+- 🔒 `.gitignore` configured to exclude sensitive files
 
 ## License
 
