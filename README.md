@@ -36,7 +36,7 @@ uv run python main.py
 ### First Run
 
 1. Browser opens and waits 60 seconds for manual login
-2. Log in to peoplehub.languagewire.com
+2. Log in to peoplehub.{company}.com
 3. Session automatically saves to `playwright/.auth/state.json`
 4. Automation proceeds and fills timesheet
 
@@ -52,7 +52,7 @@ Edit `.env` to customize time entries per day:
 
 ```env
 # Base URL
-TIMESHEET_URL=https://peoplehub.languagewire.com
+TIMESHEET_URL=https://peoplehub.contoso.com
 
 # Per-day time entries (HH:MM format)
 MONDAY_START_TIME_1=08:30

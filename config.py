@@ -26,7 +26,7 @@ class Config:
     AUTH_STATE_FILE = AUTH_DIR / "state.json"
     
     # Application URL
-    TIMESHEET_URL = os.getenv("TIMESHEET_URL", "https://peoplehub.languagewire.com")
+    TIMESHEET_URL = os.getenv("TIMESHEET_URL", "")
     
     # Time entries configuration
     # Each day can have different time entries configured via environment variables
