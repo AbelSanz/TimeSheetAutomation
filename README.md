@@ -231,6 +231,8 @@ Changes take effect on next run (no code changes needed).
 - 🔒 Keep session state secure and private
 - 🔒 `.gitignore` configured to exclude sensitive files
 
-## License
+## Known Issues
 
-MIT License
+### Application Fails to Start on First Run
+
+The application usually fails to start the first time you run it after opening it in VS Code. The reason is unknow, but the workaround is to simply run it again and it will work as expected.
