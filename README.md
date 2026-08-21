@@ -106,29 +106,8 @@ If unset, the defaults shown above are used (defined in `config.py`).
    - Fills second time block
    - Collapses dropdown
 5. Waits 10 seconds for auto-save
-6. Displays clickable review URL
+6. Displays clickable review URL in the terminal
 7. Closes browser
-
-### Technical Details
-
-**Custom Time Input Handling**: PeopleHub uses Angular `<time-input>` components. The script (see `config.py` for all time-entry defaults):
-
-- Clicks the time-input component
-- Selects hours span and types new value
-- Selects minutes span and types new value
-
-**Verified Selectors**:
-
-- Timesheet link: `a:has-text('Timesheet')`
-- Current button: `button.btn.btn-primary:has-text('Current')`
-- Day headers: `div.wx-timesheet-day__header-weekday:has-text('{day}')`
-- Add button: `button.test-add:has-text('+')`
-
-**Holiday Detection**: Automatically detects and skips (configured centrally in `config.py`):
-
-- Public holidays (`wx-timesheet-day__indicator-holiday`)
-- Approved vacations (`wx-timesheet-day__indicator-vacation-approved`)
-- Approved absences (`wx-timesheet-day__indicator-absence-approved`)
 
 ## VS Code Integration
 
@@ -143,20 +122,6 @@ If unset, the defaults shown above are used (defined in `config.py`).
 - **Clear Saved Session**: Delete authentication state
 - **Install Dependencies**: Run `uv sync`
 - **Install Playwright Browsers**: Install Chromium
-
-### Command Line
-
-```bash
-# Normal run
-uv run python main.py
-
-# Clear session and re-login
-rm playwright/.auth/state.json
-uv run python main.py
-
-# Debug mode
-$env:LOG_LEVEL="DEBUG"; uv run python main.py
-```
 
 ## Project Structure
 
@@ -179,6 +144,10 @@ TimeSheetAutomation/
 ```
 
 ## Troubleshooting
+
+### Application Fails to Start on First Run
+
+The application usually fails to start the first time you run it after opening it in VS Code. The reason is unknown, but the workaround is to simply run it again and it will work as expected. It doesn't happen if you use the VS Code task runner.
 
 ### Session Expired or Login Required
 
@@ -230,9 +199,3 @@ Changes take effect on next run (no code changes needed).
 - 🔒 Authentication cookies stored locally in `state.json`
 - 🔒 Keep session state secure and private
 - 🔒 `.gitignore` configured to exclude sensitive files
-
-## Known Issues
-
-### Application Fails to Start on First Run
-
-The application usually fails to start the first time you run it after opening it in VS Code. The reason is unknow, but the workaround is to simply run it again and it will work as expected.
