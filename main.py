@@ -426,8 +426,9 @@ class TimesheetAutomation:
         """
         Navigate to the week starting on target_start using the arrow buttons.
 
-        The 'Current' button opens the next open timesheet, which is not necessarily
-        this calendar week, so the displayed week is read from the label and every
+        The 'Current' button opens the oldest timesheet that is not yet submitted or
+        locked, which is not necessarily this calendar week, so the displayed week
+        is read from the label and every
         click is verified to move exactly one week. Raises instead of continuing on
         an unexpected week, so the automation never fills the wrong timesheet.
 
@@ -481,12 +482,13 @@ class TimesheetAutomation:
             )
         logger.info(f"Timesheet is editable (status: '{state_text}')")
 
-    def run(self, target_start: date, dry_run: bool = False) -> None:
+    def run(self, target_start: date | None = None, dry_run: bool = False) -> None:
         """
         Run the timesheet automation.
 
         Args:
-            target_start: Monday of the week to fill
+            target_start: Monday of the week to fill. When None, fills the week
+                opened by the 'Current' button (the oldest unsubmitted timesheet)
             dry_run: Only navigate and validate the week, do not fill anything
         """
         logger.info("Starting timesheet automation")
@@ -517,11 +519,15 @@ class TimesheetAutomation:
                     logger.info("Session found, navigating to timesheet page")
                     self.navigate_to_timesheet_page(page)
                 
-                # Click 'Current' button to open current week
+                # Click 'Current' button to open the oldest unsubmitted week
                 self.click_current_button(page)
 
-                # Move to the requested week and make sure it can be edited
-                self.navigate_to_week(page, target_start)
+                # Move to the requested week (if any) and make sure it can be edited
+                if target_start is None:
+                    target_start = self.get_displayed_week_start(page)
+                    logger.info(f"No week requested, filling the week opened by 'Current': {target_start}")
+                else:
+                    self.navigate_to_week(page, target_start)
                 self.ensure_week_editable(page)
 
                 if dry_run:
@@ -574,8 +580,8 @@ def main():
             help="Any date (YYYY-MM-DD) within the week to fill",
         )
         week_group.add_argument(
-            "--weeks-back", type=int, default=0,
-            help="Number of weeks before this week to fill (e.g. 1 = previous week)",
+            "--weeks-back", type=int,
+            help="Number of calendar weeks before this week to fill (e.g. 1 = previous week)",
         )
         parser.add_argument(
             "--dry-run", action="store_true",
@@ -583,10 +589,12 @@ def main():
         )
         args = parser.parse_args()
 
-        if args.weeks_back < 0:
+        if args.weeks_back is not None and args.weeks_back < 0:
             parser.error("--weeks-back must be 0 or greater")
-        reference = args.week or date.today() - timedelta(weeks=args.weeks_back)
-        target_start = reference - timedelta(days=reference.weekday())
+        reference = args.week
+        if reference is None and args.weeks_back is not None:
+            reference = date.today() - timedelta(weeks=args.weeks_back)
+        target_start = reference - timedelta(days=reference.weekday()) if reference else None
 
         automation = TimesheetAutomation()
         automation.run(target_start, dry_run=args.dry_run)

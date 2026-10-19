@@ -49,13 +49,15 @@ uv run python main.py
 
 ## Choosing the Week
 
-By default the script fills the **current calendar week** (Monday–Friday of today's week).
+By default the script fills the week opened by PeopleHub's **"Current"** button, which is the **oldest timesheet that is not yet submitted or locked** (not necessarily this calendar week). If you skipped a few weeks, run it, submit, and run it again to work through them in order.
+
+To fill a specific week instead:
 
 ```bash
-# This week
+# Default: the oldest unsubmitted week
 uv run python main.py
 
-# Previous week (2 = two weeks ago, etc.)
+# Calendar week before this one (2 = two weeks ago, etc.)
 uv run python main.py --weeks-back 1
 
 # The week containing a given date (any day of the week works)
@@ -71,7 +73,7 @@ uv run python main.py --week 2026-09-14 --dry-run
 
 The script never fills a week other than the one requested and never prompts for manual action, so it is safe to run unattended (e.g. by an AI agent or a scheduler):
 
-- **Verified navigation**: PeopleHub's "Current" button opens the next *open* timesheet, which is not always this week. The script reads the week label and steps with the ◄ / ► arrows, checking after each click that the label moved exactly one week.
+- **Verified navigation**: when a specific week is requested, the script reads the week label after clicking "Current" (which may be many weeks before the requested one), then steps with the ◄ / ► arrows in either direction (up to 104 weeks), checking after each click that the label moved exactly one week. The displayed week is always logged.
 - **Locked weeks**: Submitted or approved timesheets cannot be edited. The script stops before touching them.
 
 When a check fails, the script logs the reason and exits with code `1` without filling anything.
@@ -127,7 +129,7 @@ If unset, the defaults shown above are used (defined in `config.py`).
 
 1. Loads saved browser session (or prompts for manual login)
 2. Navigates to timesheet page
-3. Clicks "Current" button, then navigates to the requested week and checks it is editable
+3. Clicks "Current" button, navigates to the requested week (if any) and checks it is editable
 4. For each weekday (Monday-Friday):
    - Checks for holidays/absences (skips if detected)
    - Expands day dropdown
