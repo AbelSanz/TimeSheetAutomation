@@ -378,6 +378,7 @@ class TimesheetAutomation:
         logger.info("Starting timesheet automation")
         
         with sync_playwright() as p:
+            browser = None
             try:
                 # Launch browser in headed mode (visible)
                 logger.info("Launching browser")
@@ -438,8 +439,9 @@ class TimesheetAutomation:
                 logger.exception("Full traceback:")
                 raise
             finally:
-                logger.info("Closing browser")
-                browser.close()
+                if browser:
+                    logger.info("Closing browser")
+                    browser.close()
 
 
 def main():
