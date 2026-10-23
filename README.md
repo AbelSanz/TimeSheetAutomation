@@ -17,7 +17,7 @@ Automated timesheet filling for PeopleHub using Playwright with session persiste
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.11+ (3.15 recommended, pinned in `.python-version`)
 - uv (Python package manager)
 
 ### Setup
