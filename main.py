@@ -4,6 +4,10 @@ TimeSheet Automation - Main Entry Point
 Automates timesheet filling on PeopleHub using Playwright.
 """
 
+import argparse
+import re
+from datetime import date, datetime, timedelta
+
 from playwright.sync_api import Page
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 from playwright.sync_api import sync_playwright
@@ -76,10 +80,16 @@ class TimesheetAutomation:
             day_header = page.locator(
                 f"div.wx-timesheet-day__header-weekday:has-text('{day_name}')"
             ).first
-            
+
+            # Indicators live in the day card, not inside the header itself.
+            # The day card is the outermost ancestor containing only this day's header.
+            day_card = day_header.locator(
+                "xpath=ancestor::*[count(.//div[contains(@class,'wx-timesheet-day__header-weekday')])=1][last()]"
+            )
+
             # Check for each special indicator class
             for indicator_class in self.config.SPECIAL_DAY_INDICATORS:
-                indicator = day_header.locator(f"span.{indicator_class}")
+                indicator = day_card.locator(f".{indicator_class}")
                 indicator_count = indicator.count()
                 logger.debug(f"{day_name}: Checking for {indicator_class}, found {indicator_count}")
                 
@@ -373,8 +383,114 @@ class TimesheetAutomation:
             logger.error(f"Failed to click 'Current' button: {e}")
             raise
     
-    def run(self) -> None:
-        """Run the timesheet automation."""
+    @staticmethod
+    def parse_week_label(label: str) -> date:
+        """
+        Parse the week label shown in the navigation bar into the week's start date.
+
+        Handles labels like "5 October - 11 October 2026" and year-crossing
+        labels like "28 December - 3 January 2027".
+
+        Args:
+            label: Text of the week navigation label
+
+        Returns:
+            date: First day of the displayed week
+        """
+        match = re.match(r"\s*(\d{1,2})\s+(\w+)\s*-\s*(\d{1,2})\s+(\w+)\s+(\d{4})", label)
+        if not match:
+            raise ValueError(f"Unrecognised week label: '{label.strip()}'")
+        start_day, start_month, _, end_month, year = match.groups()
+        year = int(year)
+        start_month_num = datetime.strptime(start_month, "%B").month
+        end_month_num = datetime.strptime(end_month, "%B").month
+        if start_month_num > end_month_num:
+            year -= 1
+        return date(year, start_month_num, int(start_day))
+
+    def get_displayed_week_start(self, page: Page) -> date:
+        """
+        Read the start date of the week currently displayed.
+
+        Args:
+            page: Playwright page instance
+
+        Returns:
+            date: First day of the displayed week
+        """
+        label = page.locator(".wx-timesheet-navigation-control__label").first
+        label.wait_for(state="visible", timeout=15000)
+        return self.parse_week_label(label.inner_text())
+
+    def navigate_to_week(self, page: Page, target_start: date, max_steps: int = 104) -> None:
+        """
+        Navigate to the week starting on target_start using the arrow buttons.
+
+        The 'Current' button opens the oldest timesheet that is not yet submitted or
+        locked, which is not necessarily this calendar week, so the displayed week
+        is read from the label and every
+        click is verified to move exactly one week. Raises instead of continuing on
+        an unexpected week, so the automation never fills the wrong timesheet.
+
+        Args:
+            page: Playwright page instance
+            target_start: Monday of the week to open
+            max_steps: Maximum number of arrow clicks before giving up
+        """
+        displayed = self.get_displayed_week_start(page)
+        logger.info(f"Displayed week starts {displayed}, target week starts {target_start}")
+
+        for _ in range(max_steps):
+            if displayed == target_start:
+                logger.info(f"On target week starting {target_start}")
+                return
+
+            direction = "previous" if target_start < displayed else "next"
+            previous_start = displayed
+            expected = displayed + timedelta(days=-7 if direction == "previous" else 7)
+            page.locator(f"#timesheet-navigation-button-{direction}").click()
+
+            # Wait (up to 10 seconds) for the label to change
+            for _ in range(20):
+                page.wait_for_timeout(500)
+                displayed = self.get_displayed_week_start(page)
+                if displayed != previous_start:
+                    break
+            if displayed != expected:
+                raise RuntimeError(
+                    f"Week navigation failed: expected week starting {expected}, "
+                    f"but the page shows week starting {displayed}"
+                )
+            logger.info(f"Moved to week starting {displayed}")
+
+        raise RuntimeError(f"Could not reach week starting {target_start} within {max_steps} steps")
+
+    def ensure_week_editable(self, page: Page) -> None:
+        """
+        Fail if the displayed timesheet cannot be edited (e.g. submitted or approved).
+
+        Args:
+            page: Playwright page instance
+        """
+        state = page.locator(".wx-timesheet-action-buttons__save-state")
+        state_text = state.first.inner_text().strip() if state.count() > 0 else "unknown"
+        submit_visible = page.locator("#timesheet-action-button-submit").is_visible()
+        if not submit_visible:
+            raise RuntimeError(
+                f"Timesheet is not editable (status: '{state_text}'). "
+                "It is probably already submitted or approved."
+            )
+        logger.info(f"Timesheet is editable (status: '{state_text}')")
+
+    def run(self, target_start: date | None = None, dry_run: bool = False) -> None:
+        """
+        Run the timesheet automation.
+
+        Args:
+            target_start: Monday of the week to fill. When None, fills the week
+                opened by the 'Current' button (the oldest unsubmitted timesheet)
+            dry_run: Only navigate and validate the week, do not fill anything
+        """
         logger.info("Starting timesheet automation")
         
         with sync_playwright() as p:
@@ -404,8 +520,20 @@ class TimesheetAutomation:
                     logger.info("Session found, navigating to timesheet page")
                     self.navigate_to_timesheet_page(page)
                 
-                # Click 'Current' button to open current week
+                # Click 'Current' button to open the oldest unsubmitted week
                 self.click_current_button(page)
+
+                # Move to the requested week (if any) and make sure it can be edited
+                if target_start is None:
+                    target_start = self.get_displayed_week_start(page)
+                    logger.info(f"No week requested, filling the week opened by 'Current': {target_start}")
+                else:
+                    self.navigate_to_week(page, target_start)
+                self.ensure_week_editable(page)
+
+                if dry_run:
+                    logger.info(f"Dry run: week starting {target_start} is reachable and editable, nothing filled")
+                    return
                 
                 # Process each weekday
                 weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
@@ -447,8 +575,31 @@ class TimesheetAutomation:
 def main():
     """Main entry point."""
     try:
+        parser = argparse.ArgumentParser(description="Fill the PeopleHub timesheet")
+        week_group = parser.add_mutually_exclusive_group()
+        week_group.add_argument(
+            "--week", type=date.fromisoformat,
+            help="Any date (YYYY-MM-DD) within the week to fill",
+        )
+        week_group.add_argument(
+            "--weeks-back", type=int,
+            help="Number of calendar weeks before this week to fill (e.g. 1 = previous week)",
+        )
+        parser.add_argument(
+            "--dry-run", action="store_true",
+            help="Only navigate to the week and check it is editable, do not fill anything",
+        )
+        args = parser.parse_args()
+
+        if args.weeks_back is not None and args.weeks_back < 0:
+            parser.error("--weeks-back must be 0 or greater")
+        reference = args.week
+        if reference is None and args.weeks_back is not None:
+            reference = date.today() - timedelta(weeks=args.weeks_back)
+        target_start = reference - timedelta(days=reference.weekday()) if reference else None
+
         automation = TimesheetAutomation()
-        automation.run()
+        automation.run(target_start, dry_run=args.dry_run)
     except Exception as e:
         logger.error(f"Application error: {e}")
         exit(1)
